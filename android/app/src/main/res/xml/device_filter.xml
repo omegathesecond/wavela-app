@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- USB Device Filters for Bio ID Fingerprint Scanners -->
+<resources>
+    <!-- Generic Bio ID USB devices - Common vendor IDs for fingerprint scanners -->
+    <usb-device vendor-id="0x2808" />  <!-- Common Bio ID vendor ID -->
+    <usb-device vendor-id="0x1491" />  <!-- Alternative Bio ID vendor ID -->
+    <usb-device vendor-id="0x27C6" />  <!-- Another common fingerprint scanner vendor -->
+    
+    <!-- Specific Bio ID product combinations if known -->
+    <usb-device vendor-id="0x2808" product-id="0x0001" />
+    <usb-device vendor-id="0x2808" product-id="0x0002" />
+    <usb-device vendor-id="0x2808" product-id="0x0003" />
+    
+    <!-- Generic USB HID devices for fingerprint scanners -->
+    <usb-device class="3" subclass="0" protocol="0" />  <!-- USB HID class -->
+    
+    <!-- Serial communication devices (for UART mode) -->
+    <usb-device class="2" />  <!-- USB CDC class for serial communication -->
+</resources>
