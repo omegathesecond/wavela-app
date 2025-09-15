@@ -482,74 +482,8 @@ class VerificationFlowPage extends GetView<VerificationController> {
   }
 
   Widget _buildFingerprintSummary() {
-    final fingerprints = controller.userModel.fingerprints ?? [];
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            Icons.fingerprint,
-            color: fingerprints.isNotEmpty ? Colors.green : Colors.grey,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Fingerprints',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  fingerprints.isNotEmpty 
-                      ? '${fingerprints.length} fingerprint(s) captured'
-                      : 'Not captured',
-                  style: TextStyle(
-                    color: fingerprints.isNotEmpty 
-                        ? Colors.green[700] 
-                        : Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-                if (fingerprints.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: fingerprints.map((fp) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green[300]!),
-                      ),
-                      child: Text(
-                        '${fp.finger} (${(fp.quality * 100).toInt()}%)',
-                        style: TextStyle(
-                          color: Colors.green[800],
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    )).toList(),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Icon(
-            fingerprints.isNotEmpty ? Icons.check_circle : Icons.pending,
-            color: fingerprints.isNotEmpty ? Colors.green : Colors.orange,
-            size: 18,
-          ),
-        ],
-      ),
-    );
+    // Fingerprint functionality disabled
+    return const SizedBox.shrink();
   }
 
   Widget _buildBottomButtons() {

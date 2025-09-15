@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/job_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/services/jobs_service.dart';
 
 class JobsController extends GetxController {
@@ -31,7 +32,7 @@ class JobsController extends GetxController {
     if (searchQuery.value.isNotEmpty) {
       jobs = jobs.where((job) => 
         job.id.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-        job.userModel?.fullName?.toLowerCase().contains(searchQuery.value.toLowerCase()) == true ||
+        _getFullName(job.userModel)?.toLowerCase().contains(searchQuery.value.toLowerCase()) == true ||
         job.documentType.toLowerCase().contains(searchQuery.value.toLowerCase())
       ).toList();
     }
@@ -42,10 +43,10 @@ class JobsController extends GetxController {
     return jobs;
   }
   
-  int get totalJobs => _jobsService.totalJobs;
-  int get pendingJobs => _jobsService.pendingJobs;
-  int get inProgressJobs => _jobsService.inProgressJobs;
-  int get completedJobs => _jobsService.completedJobs;
+  int get totalJobs => _jobsService.jobs.length;
+  int get pendingJobs => _jobsService.pendingJobs.length;
+  int get inProgressJobs => _jobsService.inProgressJobs.length;
+  int get completedJobs => _jobsService.completedJobs.length;
   
   void setFilter(String filter) {
     selectedFilter.value = filter;
@@ -101,19 +102,24 @@ class JobsController extends GetxController {
     switch (stage) {
       case JobStage.submitted:
         return Icons.send;
-      case JobStage.documentReview:
-        return Icons.description;
+      case JobStage.ocrProcessing:
+        return Icons.text_fields;
       case JobStage.faceVerification:
         return Icons.face;
-      case JobStage.fingerprintAnalysis:
-        return Icons.fingerprint;
-      case JobStage.backgroundCheck:
+      case JobStage.amlCheck:
         return Icons.security;
       case JobStage.finalReview:
         return Icons.rate_review;
       case JobStage.completed:
         return Icons.done_all;
     }
+  }
+
+  String? _getFullName(UserModel? user) {
+    if (user?.names != null && user?.surname != null) {
+      return '${user!.names} ${user.surname}';
+    }
+    return null;
   }
   
   String formatTimeAgo(DateTime dateTime) {

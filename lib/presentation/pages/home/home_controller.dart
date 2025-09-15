@@ -32,9 +32,9 @@ class HomeController extends GetxController {
     Get.toNamed('/verification/selfie');
   }
 
-  void captureFingerprint() {
-    Get.toNamed('/verification/fingerprint');
-  }
+  // void captureFingerprint() {
+  //   Get.toNamed('/verification/fingerprint');
+  // }
 
   void viewStatus() {
     Get.toNamed('/jobs');
@@ -43,6 +43,26 @@ class HomeController extends GetxController {
   void showInstructions() {
     debugPrint('[HomeController] Showing instructions/onboarding');
     Get.toNamed('/onboarding');
+  }
+
+  void contactSupport() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Contact Support'),
+        content: const Text(
+          'For assistance with your verification, please contact:\n\n'
+          'Email: support@wavela.com\n'
+          'Phone: +268 123 4567\n'
+          'Hours: Mon-Fri 9AM-5PM',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void addActivity(String title, String status, IconData icon, Color color) {

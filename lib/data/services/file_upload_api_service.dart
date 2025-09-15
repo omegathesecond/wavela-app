@@ -31,7 +31,7 @@ class FileUploadApiService extends getx.GetxService {
       final fileName = path.basename(filePath);
       final fileSize = bytes.length;
       
-      debugPrint('📄 [FileUploadApiService] File: $fileName (${fileSize} bytes)');
+      debugPrint('📄 [FileUploadApiService] File: $fileName ($fileSize bytes)');
 
       final formData = FormData.fromMap({
         'jobId': jobId,

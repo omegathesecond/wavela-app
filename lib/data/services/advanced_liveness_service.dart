@@ -115,19 +115,25 @@ class AdvancedLivenessService extends GetxService {
     hasDetectedHeadMovement.value = false;
     hasDetectedBodyMovement.value = false;
     hasStableFace.value = false;
-    
+    isProcessing.value = false;
+
     _baseHeadYaw = null;
     _baseHeadPitch = null;
     _basePose = null;
+
+    // Clear throttling timestamp to allow immediate processing on retry
+    _lastProcessTime = null;
+
+    debugPrint('[AdvancedLivenessService] Tracking state reset complete');
   }
 
   Future<void> processFrame(CameraImage image, CameraDescription camera) async {
     if (isProcessing.value || state.value == LivenessState.allCompleted) return;
     
-    // Aggressive throttling (max 1 FPS to prevent buffer overflow)
+    // Moderate throttling (max 2 FPS to prevent buffer overflow while allowing responsive detection)
     if (_lastProcessTime != null) {
       final timeSinceLastProcess = DateTime.now().difference(_lastProcessTime!);
-      if (timeSinceLastProcess.inMilliseconds < 1000) return;
+      if (timeSinceLastProcess.inMilliseconds < 500) return;
     }
     
     debugPrint('🎥 [AdvancedLiveness] Processing frame: ${image.width}x${image.height}, Format: ${image.format.group}');
@@ -356,8 +362,15 @@ class AdvancedLivenessService extends GetxService {
   }
 
   void resetLivenessDetection() {
+    debugPrint('[AdvancedLivenessService] Resetting liveness detection state...');
+
     state.value = LivenessState.idle;
+    currentInstruction.value = '';
+    progress.value = 0.0;
+
     _resetTrackingState();
+
+    debugPrint('[AdvancedLivenessService] Reset complete');
   }
 
   // Getters for UI

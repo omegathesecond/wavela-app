@@ -35,10 +35,25 @@ class JobsApiService extends getx.GetxService {
           'created_at': DateTime.now().toIso8601String(),
         },
       );
-      
+
       return JobModel.fromJson(response.data);
     } catch (e) {
       throw _handleJobError('Failed to create verification job', e);
+    }
+  }
+
+  /// Creates a new job from submitted data
+  /// Generic method for job creation
+  Future<JobModel> createJob(Map<String, dynamic> jobData) async {
+    try {
+      final response = await _apiService.post(
+        ApiEndpoints.createJob,
+        data: jobData,
+      );
+
+      return JobModel.fromJson(response.data);
+    } catch (e) {
+      throw _handleJobError('Failed to create job', e);
     }
   }
   

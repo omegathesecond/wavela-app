@@ -184,8 +184,10 @@ class SelfieController extends GetxController {
       ));
       
       _resetLivenessDetection();
-      Future.delayed(Duration(milliseconds: 1000), () {
-        if (!hasCompletedLiveness.value) {
+      // Increased delay to ensure complete cleanup before retry
+      Future.delayed(Duration(milliseconds: 1500), () {
+        if (!hasCompletedLiveness.value && isCameraReady.value) {
+          debugPrint('[SelfieController] Starting retry attempt $_retryCount');
           startLivenessDetection();
         }
       });
@@ -226,8 +228,12 @@ class SelfieController extends GetxController {
               Get.back();
               _retryCount = 0; // Reset retry count
               _resetLivenessDetection();
-              Future.delayed(Duration(milliseconds: 500), () {
-                startLivenessDetection();
+              // Longer delay for manual retry to ensure complete reset
+              Future.delayed(Duration(milliseconds: 2000), () {
+                if (isCameraReady.value) {
+                  debugPrint('[SelfieController] Starting manual retry after user guidance');
+                  startLivenessDetection();
+                }
               });
             },
             child: Text('Try Again'),
@@ -383,24 +389,39 @@ class SelfieController extends GetxController {
   }
 
   void _resetLivenessDetection() {
+    debugPrint('[SelfieController] Resetting liveness detection...');
+
     isLivenessStarted.value = false;
     hasCompletedLiveness.value = false;
     isProcessing.value = false;
+    hasFaceDetected.value = false;
+    canCapture.value = false;
     _detectionTimer?.cancel();
-    
+
     // Stop image stream before resetting to prevent buffer issues
     try {
       _cameraService.stopImageStream();
     } catch (e) {
       debugPrint('[SelfieController] Error stopping stream during reset: $e');
     }
-    
+
     // Reset frame processing state
     _lastFrameProcessTime = null;
     _droppedFrameCount = 0;
     _isProcessingFace = false;
-    
+
+    // Reset liveness service
     _livenessService.resetLivenessDetection();
+
+    // Wait a moment before restarting image stream to ensure clean state
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (isCameraReady.value && !hasCompletedLiveness.value) {
+        debugPrint('[SelfieController] Restarting image stream after reset');
+        _startImageStream();
+      }
+    });
+
+    debugPrint('[SelfieController] Reset complete');
   }
 
   void switchCamera() async {

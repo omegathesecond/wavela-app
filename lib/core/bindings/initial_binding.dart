@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../../data/services/camera_service.dart';
 import '../../data/services/biometric_service.dart';
 import '../../data/services/ocr_service.dart';
-import '../../data/services/fingerprint_service.dart';
+// import '../../data/services/fingerprint_service.dart';
 import '../../data/services/jobs_service.dart';
 import '../../data/services/jobs_api_service.dart';
 import '../../data/services/verification_api_service.dart';
@@ -21,7 +21,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => CameraService());
     Get.lazyPut(() => BiometricService());
     Get.lazyPut(() => OCRService());
-    Get.lazyPut(() => FingerprintService());
+    // Get.lazyPut(() => FingerprintService());
     Get.lazyPut(() => JobsService());
     Get.lazyPut(() => JobsApiService());
     Get.lazyPut(() => VerificationApiService());

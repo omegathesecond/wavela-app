@@ -27,29 +27,16 @@ class ResultPage extends GetView<ResultController> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Progress circle with percentage
-        Obx(() => Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: CircularProgressIndicator(
-                value: controller.progress.value,
-                strokeWidth: 8,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-              ),
-            ),
-            Text(
-              '${(controller.progress.value * 100).toInt()}%',
-              style: Theme.of(Get.context!).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
-            ),
-          ],
-        )),
+        // Simple progress circle
+        SizedBox(
+          width: 80,
+          height: 80,
+          child: CircularProgressIndicator(
+            strokeWidth: 6,
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+          ),
+        ),
         const SizedBox(height: 32),
         Text(
           'Verifying Documents',
@@ -60,7 +47,7 @@ class ResultPage extends GetView<ResultController> {
         ),
         const SizedBox(height: 8),
         Text(
-          'This can take a few minutes. Please wait...',
+          'Please wait while we verify your documents...',
           style: const TextStyle(
             fontSize: 16,
             color: Colors.grey,
@@ -68,89 +55,36 @@ class ResultPage extends GetView<ResultController> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        Obx(() => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(25),
+        Obx(() => Text(
+          controller.processingStatus.value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.blue,
           ),
-          child: Text(
-            controller.processingStatus.value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.blue,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          textAlign: TextAlign.center,
         )),
-        const SizedBox(height: 24),
-        // Show job ID if available
-        Obx(() => controller.jobId.value.isNotEmpty 
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-              ),
-              child: Text(
-                'Job ID: ${controller.jobId.value}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.blue,
-                  fontWeight: FontWeight.w500,
+        const SizedBox(height: 32),
+        // Show retry button if processing timed out
+        Obx(() => controller.showRetryOption.value
+          ? Column(
+              children: [
+                ElevatedButton(
+                  onPressed: controller.retryVerification,
+                  child: const Text('Check Again'),
                 ),
-              ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: controller.contactSupport,
+                  child: const Text('Contact Support'),
+                ),
+              ],
             )
           : const SizedBox.shrink()),
-        const SizedBox(height: 24),
-        _buildProcessingSteps(),
       ],
     );
   }
 
-  Widget _buildProcessingSteps() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Obx(() => Column(
-        children: [
-          _buildProcessingStep('📤 Uploading your documents', controller.progress.value >= 0.3),
-          _buildProcessingStep('🔍 Reviewing your documents', controller.progress.value >= 0.6),
-          _buildProcessingStep('👤 Verifying your identity', controller.progress.value >= 0.9),
-          _buildProcessingStep('✅ Finalizing verification', controller.progress.value >= 1.0),
-        ],
-      )),
-    );
-  }
-
-  Widget _buildProcessingStep(String title, bool completed) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(
-            completed ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: completed ? Colors.green : Colors.grey,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: completed ? Colors.green : Colors.grey[600],
-                fontWeight: completed ? FontWeight.w500 : FontWeight.normal,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildResultView() {
     final isSuccess = controller.verificationResult.value == VerificationResult.success;
@@ -210,8 +144,6 @@ class ResultPage extends GetView<ResultController> {
         return 'Verification Failed';
       case VerificationResult.processing:
         return 'Processing...';
-      default:
-        return 'Processing...';
     }
   }
 
@@ -223,8 +155,6 @@ class ResultPage extends GetView<ResultController> {
         return 'We could not verify your identity. Please try again or contact support.';
       case VerificationResult.processing:
         return 'Your verification is being processed. Please wait...';
-      default:
-        return '';
     }
   }
 

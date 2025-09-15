@@ -99,33 +99,15 @@ class HomePage extends GetView<HomeController> {
           childAspectRatio: 1.5,
           children: [
             _buildActionCard(
-              'Scan ID',
-              Icons.credit_card,
-              Colors.blue,
-              controller.scanID,
-            ),
-            _buildActionCard(
-              'Take Selfie',
-              Icons.camera_alt,
-              Colors.green,
-              controller.takeSelfie,
-            ),
-            _buildActionCard(
-              'Fingerprint',
-              Icons.fingerprint,
-              Colors.orange,
-              controller.captureFingerprint,
-            ),
-            _buildActionCard(
-              'View Status',
-              Icons.info_outline,
-              Colors.purple,
-              controller.viewStatus,
-            ),
-            _buildActionCard(
-              'Help & Guide',
+              'Help & Support',
               Icons.help_outline,
               Colors.teal,
+              controller.contactSupport,
+            ),
+            _buildActionCard(
+              'Instructions',
+              Icons.info_outline,
+              Colors.blue,
               controller.showInstructions,
             ),
           ],

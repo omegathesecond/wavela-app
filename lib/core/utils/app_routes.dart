@@ -11,8 +11,8 @@ import '../../presentation/pages/verification/id_capture/id_capture_page.dart';
 import '../../presentation/pages/verification/id_capture/id_capture_binding.dart';
 import '../../presentation/pages/verification/selfie/selfie_capture_page.dart';
 import '../../presentation/pages/verification/selfie/selfie_binding.dart';
-import '../../presentation/pages/verification/fingerprint/fingerprint_capture_page.dart';
-import '../../presentation/pages/verification/fingerprint/fingerprint_binding.dart';
+// import '../../presentation/pages/verification/fingerprint/fingerprint_capture_page.dart';
+// import '../../presentation/pages/verification/fingerprint/fingerprint_binding.dart';
 import '../../presentation/pages/verification/result/result_page.dart';
 import '../../presentation/pages/verification/result/result_binding.dart';
 import '../../presentation/pages/jobs/jobs_page.dart';
@@ -26,7 +26,7 @@ class AppRoutes {
   static const String verification = '/verification';
   static const String idCapture = '/verification/id-capture';
   static const String selfieCapture = '/verification/selfie';
-  static const String fingerprintCapture = '/verification/fingerprint';
+  // static const String fingerprintCapture = '/verification/fingerprint';
   static const String result = '/verification/result';
   static const String jobs = '/jobs';
   static const String jobDetails = '/jobs/details';
@@ -62,11 +62,11 @@ class AppRoutes {
       page: () => const SelfieCapturePage(),
       binding: SelfieBinding(),
     ),
-    GetPage(
-      name: fingerprintCapture,
-      page: () => const FingerprintCapturePage(),
-      binding: FingerprintBinding(),
-    ),
+    // GetPage(
+    //   name: fingerprintCapture,
+    //   page: () => const FingerprintCapturePage(),
+    //   binding: FingerprintBinding(),
+    // ),
     GetPage(
       name: result,
       page: () => const ResultPage(),

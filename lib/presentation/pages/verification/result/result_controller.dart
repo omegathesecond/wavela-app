@@ -19,6 +19,7 @@ class ResultController extends GetxController {
   final RxString jobId = ''.obs;
   final RxString completionTime = ''.obs;
   final RxInt confidenceScore = 0.obs;
+  final RxBool showRetryOption = false.obs;
   
   late VerificationApiService _verificationApi;
   late VerificationController _verificationController;
@@ -45,7 +46,6 @@ class ResultController extends GetxController {
       
       // Start the verification process
       final result = await _verificationApi.startKYCVerification(
-        userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
         idFrontPath: userModel.idFrontImage!,
         idBackPath: userModel.idBackImage!,
         selfiePath: userModel.selfieImage!,
@@ -55,7 +55,17 @@ class ResultController extends GetxController {
         },
         onProgress: (progressInfo) {
           debugPrint('📊 [ResultController] Progress: ${progressInfo.stage} - ${progressInfo.message}');
-          
+
+          // Handle timeout scenario
+          if (progressInfo.stage == 'timeout') {
+            verificationResult.value = VerificationResult.processing;
+            processingStatus.value = 'Verification is taking longer than usual. You can check again or contact support.';
+            progress.value = 0.8;
+            isProcessing.value = false;
+            showRetryOption.value = true;
+            return;
+          }
+
           // Simplify the status messages for better UX
           switch (progressInfo.stage) {
             case 'uploading':
@@ -71,7 +81,7 @@ class ResultController extends GetxController {
             default:
               processingStatus.value = 'Verifying your documents...';
           }
-          
+
           progress.value = progressInfo.progress;
         },
       );
@@ -104,13 +114,23 @@ class ResultController extends GetxController {
       
     } catch (e) {
       debugPrint('❌ [ResultController] Verification failed: $e');
-      
+
+      // Handle timeout specifically
+      if (e.toString().contains('timeout')) {
+        verificationResult.value = VerificationResult.processing;
+        processingStatus.value = 'Verification is taking longer than usual. You can check again or contact support.';
+        progress.value = 0.8;
+        isProcessing.value = false;
+        showRetryOption.value = true;
+        return;
+      }
+
       verificationResult.value = VerificationResult.failed;
       processingStatus.value = 'Verification failed: ${e.toString()}';
       progress.value = 0.0;
       isProcessing.value = false;
-      
-      // Show error dialog
+
+      // Show error dialog for non-timeout errors
       Get.dialog(
         AlertDialog(
           title: Row(
@@ -134,12 +154,16 @@ class ResultController extends GetxController {
     }
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  void retryVerification() {
+    showRetryOption.value = false;
+    isProcessing.value = true;
+    progress.value = 0.0;
+    processingStatus.value = 'Restarting verification...';
+    startVerificationProcess();
   }
 
-  void retryVerification() {
-    Get.offAllNamed('/verification');
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   void goToHome() {

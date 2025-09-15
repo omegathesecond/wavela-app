@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'jobs_controller.dart';
 import '../../../data/models/job_model.dart';
+import '../../../data/models/user_model.dart';
 
 class JobsPage extends GetView<JobsController> {
   const JobsPage({super.key});
@@ -287,7 +288,7 @@ class JobsPage extends GetView<JobsController> {
                 ],
               ),
               const SizedBox(height: 8),
-              if (job.userModel?.fullName != null) ...[
+              if (_getFullName(job.userModel) != null) ...[
                 Row(
                   children: [
                     Icon(
@@ -297,7 +298,7 @@ class JobsPage extends GetView<JobsController> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      job.userModel!.fullName!,
+                      _getFullName(job.userModel)!,
                       style: TextStyle(
                         color: Colors.grey[700],
                         fontSize: 14,
@@ -396,5 +397,12 @@ class JobsPage extends GetView<JobsController> {
         ),
       ),
     );
+  }
+
+  String? _getFullName(UserModel? user) {
+    if (user?.names != null && user?.surname != null) {
+      return '${user!.names} ${user.surname}';
+    }
+    return null;
   }
 }

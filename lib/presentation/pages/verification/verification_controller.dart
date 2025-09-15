@@ -81,12 +81,12 @@ class VerificationController extends GetxController {
         final isValid = userModel.selfieImage != null;
         debugPrint('[VerificationController] Step 3 (Selfie): $isValid (selfie: ${userModel.selfieImage != null})');
         return isValid;
-      case 4: // Fingerprint
-        final isValid = userModel.fingerprints?.isNotEmpty ?? false;
-        debugPrint('[VerificationController] Step 4 (Fingerprint): $isValid (fingerprints count: ${userModel.fingerprints?.length ?? 0})');
-        return isValid;
-      case 5: // Review
-        debugPrint('[VerificationController] Step 5 (Review): always valid');
+      // case 4: // Fingerprint - disabled
+      //   final isValid = userModel.fingerprints?.isNotEmpty ?? false;
+      //   debugPrint('[VerificationController] Step 4 (Fingerprint): $isValid (fingerprints count: ${userModel.fingerprints?.length ?? 0})');
+      //   return isValid;
+      case 4: // Review
+        debugPrint('[VerificationController] Step 4 (Review): always valid');
         return true;
       default:
         debugPrint('[VerificationController] Unknown step: ${currentStep.value}');
@@ -158,10 +158,7 @@ class VerificationController extends GetxController {
       final jobsService = Get.find<JobsService>();
       
       // Create job for tracking
-      final job = await jobsService.createJobFromVerification(
-        documentType: selectedDocumentType.value == 'national_id' ? 'National ID' : selectedDocumentType.value,
-        userModel: userModel,
-      );
+      final job = await jobsService.submitVerificationJob(userModel);
       
       // Save verification data locally first
       await storageService.saveObject('current_verification', userModel.toJson());
@@ -198,7 +195,7 @@ class VerificationController extends GetxController {
       // Show success message
       Get.snackbar(
         'Submission Successful!',
-        'Your verification job ${job.id} is now being processed',
+        'Your verification job ${job?.id ?? 'N/A'} is now being processed',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.blue,
         colorText: Colors.white,
@@ -238,8 +235,8 @@ class VerificationController extends GetxController {
     updateCanProceed();
   }
   
-  void setFingerprintData(List<FingerprintData> fingerprints) {
-    userModel = userModel.copyWith(fingerprints: fingerprints);
-    updateCanProceed();
-  }
+  // void setFingerprintData(List<FingerprintData> fingerprints) {
+  //   userModel = userModel.copyWith(fingerprints: fingerprints);
+  //   updateCanProceed();
+  // }
 }

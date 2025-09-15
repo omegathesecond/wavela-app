@@ -1,18 +1,38 @@
+import 'package:flutter/foundation.dart';
 import 'user_model.dart';
 
 enum JobStage {
-  submitted('Submitted', 'Job has been submitted'),
-  ocrProcessing('OCR Processing', 'Extracting text from documents'),
-  documentReview('Document Review', 'Reviewing submitted documents'),
-  faceVerification('Face Verification', 'Verifying selfie photo'),
-  fingerprintAnalysis('Fingerprint Analysis', 'Analyzing fingerprint biometrics'),
-  backgroundCheck('Background Check', 'Conducting background verification'),
+  submitted('Application Submitted', 'Job has been submitted'),
+  faceVerification('Face Verification', 'Verifying selfie against ID photo'),
+  ocrProcessing('Document Processing', 'Extracting text from documents'),
+  amlCheck('Security Check', 'Anti-money laundering verification'),
   finalReview('Final Review', 'Manual review and decision'),
-  completed('Completed', 'Verification process completed');
+  completed('Verification Complete', 'Verification process completed');
 
   const JobStage(this.title, this.description);
   final String title;
   final String description;
+
+  static JobStage _parseJobStage(String? stageString) {
+    if (stageString == null) return JobStage.submitted;
+
+    switch (stageString) {
+      case 'submitted':
+        return JobStage.submitted;
+      case 'face_verification':
+        return JobStage.faceVerification;
+      case 'ocr_processing':
+        return JobStage.ocrProcessing;
+      case 'aml_check':
+        return JobStage.amlCheck;
+      case 'final_review':
+        return JobStage.finalReview;
+      case 'completed':
+        return JobStage.completed;
+      default:
+        return JobStage.submitted;
+    }
+  }
 }
 
 enum JobStatus {
@@ -28,10 +48,22 @@ enum JobStatus {
   final String description;
 
   static JobStatus fromString(String value) {
-    return JobStatus.values.firstWhere(
-      (status) => status.name == value,
-      orElse: () => JobStatus.pending,
-    );
+    switch (value) {
+      case 'pending':
+        return JobStatus.pending;
+      case 'in_progress':
+        return JobStatus.inProgress;
+      case 'on_hold':
+        return JobStatus.onHold;
+      case 'completed':
+        return JobStatus.completed;
+      case 'rejected':
+        return JobStatus.rejected;
+      case 'expired':
+        return JobStatus.expired;
+      default:
+        return JobStatus.pending;
+    }
   }
 }
 
@@ -75,10 +107,7 @@ class JobModel {
       kycUserId: json['kycUserId'],
       documentType: json['documentType'],
       status: JobStatus.fromString(json['status']),
-      currentStage: JobStage.values.firstWhere(
-        (stage) => stage.name == json['currentStage'],
-        orElse: () => JobStage.submitted,
-      ),
+      currentStage: JobStage._parseJobStage(json['currentStage']),
       stageProgress: (json['stageProgress'] as List<dynamic>?)
           ?.map((e) => JobStageProgress.fromJson(e))
           .toList() ?? [],
@@ -169,10 +198,7 @@ class JobStageProgress {
 
   factory JobStageProgress.fromJson(Map<String, dynamic> json) {
     return JobStageProgress(
-      stage: JobStage.values.firstWhere(
-        (stage) => stage.name == json['stage'],
-        orElse: () => JobStage.submitted,
-      ),
+      stage: JobStage._parseJobStage(json['stage']),
       isCompleted: json['isCompleted'] ?? false,
       isActive: json['isActive'] ?? false,
       completedAt: json['completedAt'] != null 
@@ -213,16 +239,72 @@ class OCRExtractedData {
   });
 
   factory OCRExtractedData.fromJson(Map<String, dynamic> json) {
+    // Handle direct simple format
+    if (json.containsKey('surname') && json['surname'] is String) {
+      return OCRExtractedData(
+        surname: json['surname'],
+        names: json['names'],
+        personalIdNumber: json['personalIdNumber'],
+        dateOfBirth: json['dateOfBirth'] != null
+            ? DateTime.parse(json['dateOfBirth'])
+            : null,
+        sex: json['sex'],
+        chiefCode: json['chiefCode'],
+        confidence: json['confidence']?.toDouble(),
+      );
+    }
+
+    // Handle complex API response format
+    String? extractedSurname;
+    String? extractedNames;
+    String? extractedIdNumber;
+    String? extractedSex;
+    String? extractedChiefCode;
+    double? extractedConfidence;
+
+    // Try to extract from API response structure
+    try {
+      extractedSurname = json['surname'];
+      extractedConfidence = json['confidence']?.toDouble();
+
+      // If surname is direct, use it
+      if (extractedSurname != null) {
+        return OCRExtractedData(
+          surname: extractedSurname,
+          names: json['names'],
+          personalIdNumber: json['personalIdNumber'],
+          dateOfBirth: json['dateOfBirth'] != null
+              ? DateTime.tryParse(json['dateOfBirth'])
+              : null,
+          sex: json['sex'],
+          chiefCode: json['chiefCode'],
+          confidence: extractedConfidence?.round(),
+        );
+      }
+
+      // Fallback: try to parse from extractedText array if available
+      final extractedText = json['extractedText'];
+      if (extractedText is List) {
+        for (String text in extractedText.cast<String>()) {
+          if (text.startsWith('LAST_NAME:')) {
+            extractedSurname = text.split(':').last.trim();
+          }
+          // Add more parsing logic as needed
+        }
+      }
+    } catch (e) {
+      // If parsing fails, return with available data
+      debugPrint('[OCRExtractedData] Parsing error: $e');
+    }
+
     return OCRExtractedData(
-      surname: json['surname'],
-      names: json['names'],
-      personalIdNumber: json['personalIdNumber'],
-      dateOfBirth: json['dateOfBirth'] != null
-          ? DateTime.parse(json['dateOfBirth'])
-          : null,
-      sex: json['sex'],
-      chiefCode: json['chiefCode'],
-      confidence: json['confidence'],
+      surname: extractedSurname,
+      names: extractedNames,
+      personalIdNumber: extractedIdNumber,
+      dateOfBirth: null,
+      sex: extractedSex,
+      chiefCode: extractedChiefCode,
+      confidence: extractedConfidence?.round(),
     );
   }
 

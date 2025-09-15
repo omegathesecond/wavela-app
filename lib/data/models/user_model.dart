@@ -11,7 +11,7 @@ class UserModel {
   final String? idFrontImage;
   final String? idBackImage;
   final String? selfieImage;
-  final List<FingerprintData>? fingerprints;
+  // final List<FingerprintData>? fingerprints;
   final VerificationStatus? verificationStatus;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -29,7 +29,7 @@ class UserModel {
     this.idFrontImage,
     this.idBackImage,
     this.selfieImage,
-    this.fingerprints,
+    // this.fingerprints,
     this.verificationStatus,
     this.createdAt,
     this.updatedAt,
@@ -51,11 +51,11 @@ class UserModel {
       idFrontImage: json['idFrontImage'],
       idBackImage: json['idBackImage'],
       selfieImage: json['selfieImage'],
-      fingerprints: json['fingerprints'] != null
-          ? (json['fingerprints'] as List)
-              .map((e) => FingerprintData.fromJson(e))
-              .toList()
-          : null,
+      // fingerprints: json['fingerprints'] != null
+      //     ? (json['fingerprints'] as List)
+      //         .map((e) => FingerprintData.fromJson(e))
+      //         .toList()
+      //     : null,
       verificationStatus: json['verificationStatus'] != null
           ? VerificationStatus.fromString(json['verificationStatus'])
           : null,
@@ -82,7 +82,7 @@ class UserModel {
       'idFrontImage': idFrontImage,
       'idBackImage': idBackImage,
       'selfieImage': selfieImage,
-      'fingerprints': fingerprints?.map((e) => e.toJson()).toList(),
+      // 'fingerprints': fingerprints?.map((e) => e.toJson()).toList(),
       'verificationStatus': verificationStatus?.value,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -102,7 +102,7 @@ class UserModel {
     String? idFrontImage,
     String? idBackImage,
     String? selfieImage,
-    List<FingerprintData>? fingerprints,
+    // List<FingerprintData>? fingerprints,
     VerificationStatus? verificationStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -120,7 +120,7 @@ class UserModel {
       idFrontImage: idFrontImage ?? this.idFrontImage,
       idBackImage: idBackImage ?? this.idBackImage,
       selfieImage: selfieImage ?? this.selfieImage,
-      fingerprints: fingerprints ?? this.fingerprints,
+      // fingerprints: fingerprints ?? this.fingerprints,
       verificationStatus: verificationStatus ?? this.verificationStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -128,37 +128,37 @@ class UserModel {
   }
 }
 
-class FingerprintData {
-  final String finger;
-  final String template;
-  final double quality;
-  final DateTime capturedAt;
+// class FingerprintData {
+//   final String finger;
+//   final String template;
+//   final double quality;
+//   final DateTime capturedAt;
 
-  FingerprintData({
-    required this.finger,
-    required this.template,
-    required this.quality,
-    required this.capturedAt,
-  });
+//   FingerprintData({
+//     required this.finger,
+//     required this.template,
+//     required this.quality,
+//     required this.capturedAt,
+//   });
 
-  factory FingerprintData.fromJson(Map<String, dynamic> json) {
-    return FingerprintData(
-      finger: json['finger'],
-      template: json['template'],
-      quality: (json['quality'] ?? 0.0).toDouble(),
-      capturedAt: DateTime.parse(json['capturedAt']),
-    );
-  }
+//   factory FingerprintData.fromJson(Map<String, dynamic> json) {
+//     return FingerprintData(
+//       finger: json['finger'],
+//       template: json['template'],
+//       quality: (json['quality'] ?? 0.0).toDouble(),
+//       capturedAt: DateTime.parse(json['capturedAt']),
+//     );
+//   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'finger': finger,
-      'template': template,
-      'quality': quality,
-      'capturedAt': capturedAt.toIso8601String(),
-    };
-  }
-}
+//   Map<String, dynamic> toJson() {
+//     return {
+//       'finger': finger,
+//       'template': template,
+//       'quality': quality,
+//       'capturedAt': capturedAt.toIso8601String(),
+//     };
+//   }
+// }
 
 enum VerificationStatus {
   pending('pending'),

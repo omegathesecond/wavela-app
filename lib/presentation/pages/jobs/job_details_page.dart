@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/job_model.dart';
+import '../../../data/models/user_model.dart';
 import 'jobs_controller.dart';
 
 class JobDetailsPage extends GetView<JobsController> {
@@ -387,56 +388,56 @@ class JobDetailsPage extends GetView<JobsController> {
           ),
           child: Column(
             children: [
-              if (user.fullName != null)
-                _buildDetailRow('Full Name', user.fullName!),
-              if (user.idNumber != null)
-                _buildDetailRow('ID Number', user.idNumber!),
+              if (_getFullName(user) != null)
+                _buildDetailRow('Full Name', _getFullName(user)!),
+              if (user.personalIdNumber != null)
+                _buildDetailRow('ID Number', user.personalIdNumber!),
               if (user.email != null)
                 _buildDetailRow('Email', user.email!),
               if (user.phoneNumber != null)
                 _buildDetailRow('Phone', user.phoneNumber!),
-              if (user.fingerprints?.isNotEmpty == true) ...[
-                const Divider(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.fingerprint,
-                      color: Colors.blue,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Fingerprints Captured',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: user.fingerprints!.map((fp) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green[200]!),
-                    ),
-                    child: Text(
-                      '${fp.finger} (${(fp.quality * 100).toInt()}%)',
-                      style: TextStyle(
-                        color: Colors.green[700],
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )).toList(),
-                ),
-              ],
+              // if (user.fingerprints?.isNotEmpty == true) ...[
+              //   const Divider(),
+              //   const SizedBox(height: 8),
+              //   Row(
+              //     children: [
+              //       Icon(
+              //         Icons.fingerprint,
+              //         color: Colors.blue,
+              //         size: 20,
+              //       ),
+              //       const SizedBox(width: 12),
+              //       const Text(
+              //         'Fingerprints Captured',
+              //         style: TextStyle(
+              //           fontWeight: FontWeight.w600,
+              //           fontSize: 14,
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              //   const SizedBox(height: 8),
+              //   Wrap(
+              //     spacing: 8,
+              //     runSpacing: 4,
+              //     children: user.fingerprints!.map((fp) => Container(
+              //       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              //       decoration: BoxDecoration(
+              //         color: Colors.green[50],
+              //         borderRadius: BorderRadius.circular(12),
+              //         border: Border.all(color: Colors.green[200]!),
+              //       ),
+              //       child: Text(
+              //         '${fp.finger} (${(fp.quality * 100).toInt()}%)',
+              //         style: TextStyle(
+              //           color: Colors.green[700],
+              //           fontSize: 11,
+              //           fontWeight: FontWeight.w500,
+              //         ),
+              //       ),
+              //     )).toList(),
+              //   ),
+              // ],
             ],
           ),
         ),
@@ -472,5 +473,12 @@ class JobDetailsPage extends GetView<JobsController> {
         ],
       ),
     );
+  }
+
+  String? _getFullName(UserModel user) {
+    if (user.names != null && user.surname != null) {
+      return '${user.names} ${user.surname}';
+    }
+    return null;
   }
 }

@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' as getx;
-import 'dart:math' as math;
 import '../models/job_model.dart';
-import 'jobs_api_service.dart';
 import 'file_upload_api_service.dart';
 import 'api_service.dart';
 
 /// Verification API service that handles server-side verification
 /// Uses R2 upload + verification creation pattern for better security and scalability
 class VerificationApiService extends getx.GetxService {
-  late JobsApiService _jobsApi;
   late FileUploadApiService _fileUploadApi;
   late ApiService _apiService;
 
   @override
   void onInit() {
     super.onInit();
-    _jobsApi = getx.Get.find<JobsApiService>();
     _fileUploadApi = getx.Get.find<FileUploadApiService>();
     _apiService = getx.Get.find<ApiService>();
   }
@@ -161,18 +157,33 @@ class VerificationApiService extends getx.GetxService {
     String jobId, {
     Function(VerificationProgress)? onProgress,
   }) async {
-    const maxAttempts = 60; // 5 minutes with 5-second intervals
+    const maxAttempts = 12; // 1 minute with 5-second intervals
     const pollInterval = Duration(seconds: 5);
     
     debugPrint('🔄 [VerificationApiService] Starting to poll job status: $jobId');
     
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       debugPrint('🔄 [VerificationApiService] Poll attempt $attempt for job: $jobId');
-      
+
+      dynamic response;
       try {
         // Use direct API call with proper authentication
-        final response = await _apiService.get('/jobs/$jobId');
-        final status = JobModel.fromJson(response.data['data'] ?? response.data);
+        response = await _apiService.get('/jobs/$jobId');
+
+        // Enhanced error handling for response parsing
+        Map<String, dynamic> jobData;
+        if (response.data is Map<String, dynamic>) {
+          if (response.data.containsKey('data')) {
+            jobData = response.data['data'];
+          } else {
+            jobData = response.data;
+          }
+        } else {
+          throw Exception('Invalid response format: expected Map but got ${response.data.runtimeType}');
+        }
+
+        debugPrint('📊 [VerificationApiService] Parsing job data: ${jobData.keys}');
+        final status = JobModel.fromJson(jobData);
         
         // Simple progress calculation
         final progress = 0.4 + (0.6 * (attempt / maxAttempts));
@@ -198,8 +209,15 @@ class VerificationApiService extends getx.GetxService {
         
       } catch (e) {
         debugPrint('❌ [VerificationApiService] Failed to get job status: $e');
+
+        // If it's a type casting error, log the response data for debugging
+        if (e.toString().contains('is not a subtype of type')) {
+          debugPrint('🔍 [VerificationApiService] Type error - raw response: ${response?.data}');
+          debugPrint('🔍 [VerificationApiService] Response type: ${response?.data.runtimeType}');
+        }
+
         if (attempt == maxAttempts - 1) {
-          throw Exception('Failed to get job status: $e');
+          throw Exception('Failed to get job status after $maxAttempts attempts: $e');
         }
       }
       
@@ -207,28 +225,32 @@ class VerificationApiService extends getx.GetxService {
       await Future.delayed(pollInterval);
     }
     
-    throw Exception('Verification timeout - please check status later');
+    // Instead of throwing an exception, return a special timeout status
+    onProgress?.call(VerificationProgress(
+      stage: 'timeout',
+      message: 'Verification is taking longer than expected. You can check again or contact support.',
+      progress: 0.8,
+      error: 'timeout',
+    ));
+
+    throw Exception('timeout');
   }
 
 
   String _getProgressMessage(JobModel status) {
     switch (status.currentStage) {
       case JobStage.submitted:
-        return 'Documents received...';
-      case JobStage.ocrProcessing:
-        return 'Extracting text from documents (OCR)...';
-      case JobStage.documentReview:
-        return 'Reviewing document authenticity...';
+        return 'Documents received and queued for processing...';
       case JobStage.faceVerification:
-        return 'Verifying identity match...';
-      case JobStage.fingerprintAnalysis:
-        return 'Analyzing biometrics...';
-      case JobStage.backgroundCheck:
-        return 'Conducting background check...';
+        return 'Verifying selfie against ID document...';
+      case JobStage.ocrProcessing:
+        return 'Processing document information...';
+      case JobStage.amlCheck:
+        return 'Conducting security verification...';
       case JobStage.finalReview:
         return 'Final review in progress...';
       case JobStage.completed:
-        return 'Verification completed!';
+        return 'Verification completed successfully!';
     }
   }
 

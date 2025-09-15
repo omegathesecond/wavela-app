@@ -372,17 +372,29 @@ class LivenessService extends GetxService {
   }
 
   void resetLivenessDetection() {
+    debugPrint('[LivenessService] Resetting liveness detection state...');
+
     state.value = LivenessState.idle;
     currentChallengeIndex.value = 0;
     challengeResults.clear();
     progress.value = 0.0;
     currentInstruction.value = '';
+    isProcessing.value = false;
+
+    // Reset face tracking variables
     _primaryFaceId = null;
     _wasEyesClosed = false;
     _wasNotSmiling = false;
     _hasBaseAngles = false;
+    _baseHeadAngleY = 0.0;
+    _baseHeadAngleX = 0.0;
     consecutiveFramesWithFace.value = 0;
     hasStableFace.value = false;
+
+    // Clear throttling timestamp to allow immediate processing
+    _lastProcessTime = null;
+
+    debugPrint('[LivenessService] Reset complete');
   }
 
 
