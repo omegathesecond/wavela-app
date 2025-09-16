@@ -99,6 +99,12 @@ class HomePage extends GetView<HomeController> {
           childAspectRatio: 1.5,
           children: [
             _buildActionCard(
+              'Test Verification',
+              Icons.science,
+              Colors.orange,
+              controller.startTestVerification,
+            ),
+            _buildActionCard(
               'Help & Support',
               Icons.help_outline,
               Colors.teal,
