@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../data/services/verification_api_service.dart';
 import '../../../../data/services/api_service.dart';
+import '../../../../data/services/file_upload_api_service.dart';
 import '../verification_controller.dart';
 
 enum VerificationResult {
@@ -64,126 +65,62 @@ class ResultController extends GetxController {
 
   void startVerificationProcess() async {
     try {
-      debugPrint('🚀 [ResultController] Starting real API verification process...');
-      
+      debugPrint('🚀 [ResultController] Starting normal verification process...');
+
       final userModel = _verificationController.userModel;
       final documentType = _verificationController.selectedDocumentType.value;
-      
+
       // Validate we have all required data
       if (userModel.idFrontImage == null || userModel.idBackImage == null || userModel.selfieImage == null) {
         throw Exception('Missing required images for verification');
       }
-      
-      // Start the verification process
-      final result = await _verificationApi.startKYCVerification(
+
+      processingStatus.value = 'Uploading your documents...';
+      progress.value = 0.1;
+
+      // Step 1: Upload files to get URLs
+      final jobId = 'job_${DateTime.now().millisecondsSinceEpoch}';
+      final uploadResponses = await Get.find<FileUploadApiService>().uploadVerificationDocuments(
+        jobId: jobId,
         idFrontPath: userModel.idFrontImage!,
         idBackPath: userModel.idBackImage!,
         selfiePath: userModel.selfieImage!,
-        metadata: {
-          'documentType': documentType,
-          'timestamp': DateTime.now().toIso8601String(),
-        },
-        onProgress: (progressInfo) {
-          debugPrint('📊 [ResultController] Progress: ${progressInfo.stage} - ${progressInfo.message}');
-
-          // Handle timeout scenario
-          if (progressInfo.stage == 'timeout') {
-            verificationResult.value = VerificationResult.processing;
-            processingStatus.value = 'Verification is taking longer than usual. You can check again or contact support.';
-            progress.value = 0.8;
-            isProcessing.value = false;
-            showRetryOption.value = true;
-            return;
-          }
-
-          // Simplify the status messages for better UX
-          switch (progressInfo.stage) {
-            case 'uploading':
-              if (progressInfo.progress < 0.2) {
-                processingStatus.value = 'Uploading your documents...';
-              } else {
-                processingStatus.value = 'Documents uploaded successfully';
-              }
-              break;
-            case 'processing':
-              processingStatus.value = 'Verifying your documents...';
-              break;
-            default:
-              processingStatus.value = 'Verifying your documents...';
-          }
-
-          progress.value = progressInfo.progress;
+        onProgress: (message, uploadProgress) {
+          processingStatus.value = message;
+          progress.value = 0.1 + (0.1 * uploadProgress); // 10% to 20%
         },
       );
-      
-      // Handle final result
-      jobId.value = result.jobId;
-      verificationId.value = result.verificationId;
-      completionTime.value = _formatDateTime(result.completedAt);
-      
-      if (result.isSuccessful) {
-        verificationResult.value = VerificationResult.success;
-        confidenceScore.value = 95; // Could come from API in the future
-        processingStatus.value = 'Documents verified successfully!';
-        progress.value = 1.0;
-        isProcessing.value = false;
 
-        // Extract user info from verification result
-        _extractVerifiedUserInfoFromResult(result.results);
-      } else if (result.status.name.contains('manual') || result.status.name.contains('review') || result.status.name.contains('pending')) {
-        // Don't expose manual review to client - just show as processing
-        verificationResult.value = VerificationResult.processing;
-        processingStatus.value = 'Your verification is being processed...';
-        progress.value = 0.8; // Show as nearly complete but still processing
-        isProcessing.value = true; // Keep showing as processing
-      } else {
-        verificationResult.value = VerificationResult.failed;
-        processingStatus.value = result.message.isNotEmpty ? result.message : 'Verification failed';
-        progress.value = 1.0;
-        isProcessing.value = false;
-      }
-      
-      debugPrint('✅ [ResultController] Verification completed with result: ${verificationResult.value}');
-      
+      // Step 2: Now follow EXACTLY the same steps as test verification
+      // Create verification with uploaded URLs
+      final result = await _verificationApi.createVerification(
+        idFrontUrl: uploadResponses['id_front']?.url,
+        idBackUrl: uploadResponses['id_back']?.url,
+        selfieUrl: uploadResponses['selfie']?.url,
+        metadata: {
+          'documentType': documentType,
+        },
+      );
+
+      final actualJobId = result['jobId'] ?? result['id'];
+      this.jobId.value = actualJobId;
+      this.verificationId.value = result['id'];
+
+      debugPrint('✅ [ResultController] Normal verification created - JobId: $actualJobId, VerificationId: ${result['id']}');
+
+      // Step 3: Use EXACTLY the same polling as test verification
+      processingStatus.value = 'Processing verification...';
+      progress.value = 0.2;
+
+      // Call the SAME polling method that test uses, just pass false to indicate normal
+      await _startNormalVerificationPolling(actualJobId);
+
     } catch (e) {
-      debugPrint('❌ [ResultController] Verification failed: $e');
-
-      // Handle timeout specifically
-      if (e.toString().contains('timeout')) {
-        verificationResult.value = VerificationResult.processing;
-        processingStatus.value = 'Verification is taking longer than usual. You can check again or contact support.';
-        progress.value = 0.8;
-        isProcessing.value = false;
-        showRetryOption.value = true;
-        return;
-      }
-
+      debugPrint('❌ [ResultController] Normal verification failed: $e');
       verificationResult.value = VerificationResult.failed;
       processingStatus.value = 'Verification failed: ${e.toString()}';
       progress.value = 0.0;
       isProcessing.value = false;
-
-      // Show error dialog for non-timeout errors
-      Get.dialog(
-        AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.error, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Verification Error'),
-            ],
-          ),
-          content: Text(
-            'We encountered an error during verification:\n\n${e.toString()}\n\nPlease try again or contact support if the problem persists.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('OK'),
-            ),
-          ],
-        ),
-      );
     }
   }
 
@@ -233,6 +170,7 @@ class ResultController extends GetxController {
     );
   }
 
+  // TEST VERIFICATION POLLING - DO NOT MODIFY (it works!)
   void _startTestVerificationPolling(Map<String, dynamic> arguments) async {
     try {
       debugPrint('🧪 [ResultController] Starting test verification polling...');
@@ -252,7 +190,7 @@ class ResultController extends GetxController {
 
       for (int attempt = 0; attempt < maxAttempts; attempt++) {
         try {
-          // Use direct API call instead of the service method
+          // Use direct API call
           final response = await _apiService.get('/jobs/$jobId');
           final jobData = response.data['data'] as Map<String, dynamic>;
 
@@ -305,9 +243,13 @@ class ResultController extends GetxController {
             isProcessing.value = false;
             return;
           } else if (currentStatus == 'on_hold') {
-            // Manual review case - show as processing but taking longer
-            processingStatus.value = 'Verification will take longer than normal - you\'ll be notified when complete';
+            // Manual review case - stop polling and show message
+            verificationResult.value = VerificationResult.processing;
+            processingStatus.value = 'Your verification requires manual review. You will be notified once complete.';
             progress.value = 0.8;
+            isProcessing.value = false;
+            debugPrint('⏸️ [ResultController] Verification requires manual review - stopping polling');
+            return;
           }
 
           // Wait before next poll
@@ -331,6 +273,124 @@ class ResultController extends GetxController {
       debugPrint('❌ [ResultController] Test verification polling failed: $e');
       verificationResult.value = VerificationResult.failed;
       processingStatus.value = 'Test verification failed: ${e.toString()}';
+      progress.value = 0.0;
+      isProcessing.value = false;
+    }
+  }
+
+  // NORMAL VERIFICATION POLLING - COPY of test polling (just different messages)
+  Future<void> _startNormalVerificationPolling(String jobId) async {
+    try {
+      debugPrint('🔄 [ResultController] Starting NORMAL verification polling for job: $jobId');
+
+      // Poll job status
+      const maxAttempts = 12;
+      const pollInterval = Duration(seconds: 5);
+
+      for (int attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          debugPrint('📊 [ResultController] NORMAL polling attempt ${attempt + 1}/$maxAttempts for job: $jobId');
+
+          // Use direct API call
+          final response = await _apiService.get('/jobs/$jobId');
+          debugPrint('📋 [ResultController] NORMAL verification raw response: ${response.data}');
+
+          final jobData = response.data['data'] as Map<String, dynamic>;
+          debugPrint('📋 [ResultController] NORMAL verification job data keys: ${jobData.keys}');
+
+          // Update progress
+          final progressValue = 0.5 + (0.5 * (attempt / maxAttempts));
+          progress.value = progressValue;
+
+          // Get current stage and status from API response
+          final currentStage = jobData['currentStage'] as String? ?? 'submitted';
+          final currentStatus = jobData['currentStatus'] as String? ?? jobData['status'] as String? ?? 'pending';
+
+          debugPrint('🔍 [ResultController] NORMAL verification - Job status: $currentStatus, stage: $currentStage');
+
+          // Update status based on job stage
+          switch (currentStage) {
+            case 'submitted':
+              processingStatus.value = 'Documents received and queued...';
+              break;
+            case 'ocr_processing':
+              processingStatus.value = 'Processing document information...';
+              break;
+            case 'face_verification':
+              processingStatus.value = 'Verifying selfie against ID document...';
+              break;
+            case 'aml_check':
+            case 'final_review':
+              processingStatus.value = 'Final review in progress...';
+              break;
+            case 'completed':
+              processingStatus.value = 'Verification completed successfully!';
+              break;
+          }
+
+          // Check if job is complete
+          if (currentStatus == 'completed') {
+            verificationResult.value = VerificationResult.success;
+            processingStatus.value = 'Verification completed successfully!';
+            progress.value = 1.0;
+            isProcessing.value = false;
+            confidenceScore.value = 95;
+            completionTime.value = _formatDateTime(DateTime.now());
+
+            // Extract user information from job data for display
+            _extractVerifiedUserInfo(jobData);
+            return;
+          } else if (currentStatus == 'rejected' || currentStatus == 'expired') {
+            verificationResult.value = VerificationResult.failed;
+            processingStatus.value = 'Verification failed';
+            progress.value = 1.0;
+            isProcessing.value = false;
+            return;
+          } else if (currentStatus == 'on_hold') {
+            // Manual review case - stop polling and show message
+            verificationResult.value = VerificationResult.processing;
+            processingStatus.value = 'Your verification requires manual review. You will be notified once complete.';
+            progress.value = 0.8;
+            isProcessing.value = false;
+            debugPrint('⏸️ [ResultController] Verification requires manual review - stopping polling');
+            return;
+          }
+
+          // Wait before next poll
+          await Future.delayed(pollInterval);
+        } catch (e) {
+          debugPrint('❌ [ResultController] NORMAL verification polling attempt ${attempt + 1} failed: $e');
+
+          // Check if it's a 404 error (job not found)
+          if (e.toString().contains('404')) {
+            debugPrint('⚠️ [ResultController] NORMAL verification - Job not found. JobId might be incorrect: $jobId');
+            verificationResult.value = VerificationResult.failed;
+            processingStatus.value = 'Verification job not found. Please try again.';
+            progress.value = 0.0;
+            isProcessing.value = false;
+            return;
+          }
+
+          if (attempt == maxAttempts - 1) {
+            throw Exception('Failed to get job status after $maxAttempts attempts: $e');
+          }
+
+          // Wait before retrying on error
+          await Future.delayed(pollInterval);
+        }
+      }
+
+      // Timeout case
+      verificationResult.value = VerificationResult.processing;
+      processingStatus.value = 'Verification is taking longer than expected';
+      progress.value = 0.8;
+      isProcessing.value = false;
+      showRetryOption.value = true;
+
+    } catch (e) {
+      debugPrint('❌ [ResultController] NORMAL verification polling failed: $e');
+      verificationResult.value = VerificationResult.failed;
+      processingStatus.value = 'Verification failed: ${e.toString()}';
       progress.value = 0.0;
       isProcessing.value = false;
     }
@@ -395,22 +455,4 @@ class ResultController extends GetxController {
     }
   }
 
-  void _extractVerifiedUserInfoFromResult(Map<String, dynamic> results) {
-    try {
-      // Extract from verification results (for normal flow)
-      if (results.containsKey('userInfo')) {
-        final userInfo = results['userInfo'] as Map<String, dynamic>?;
-        if (userInfo != null) {
-          verifiedName.value = userInfo['names'] ?? '';
-          verifiedSurname.value = userInfo['surname'] ?? '';
-          verifiedIdNumber.value = userInfo['personalIdNumber'] ?? '';
-          verifiedDateOfBirth.value = userInfo['dateOfBirth'] ?? '';
-          verifiedSex.value = userInfo['sex'] ?? '';
-        }
-      }
-      debugPrint('✅ [ResultController] Extracted user info from verification result');
-    } catch (e) {
-      debugPrint('❌ [ResultController] Error extracting user info from result: $e');
-    }
-  }
 }

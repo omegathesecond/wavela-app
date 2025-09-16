@@ -183,28 +183,68 @@ class VerificationApiService extends getx.GetxService {
         }
 
         debugPrint('📊 [VerificationApiService] Parsing job data: ${jobData.keys}');
-        final status = JobModel.fromJson(jobData);
-        
+
+        // Get status directly from API response instead of using JobModel
+        final currentStatus = jobData['currentStatus'] as String? ?? jobData['status'] as String? ?? 'pending';
+        final currentStage = jobData['currentStage'] as String? ?? 'submitted';
+
         // Simple progress calculation
         final progress = 0.4 + (0.6 * (attempt / maxAttempts));
-        final message = _getProgressMessage(status);
-        
+        final message = _getProgressMessageFromStage(currentStage);
+
         onProgress?.call(VerificationProgress(
           stage: 'processing',
           message: message,
           progress: progress,
-          currentStage: status.currentStage.name,
-          jobStatus: status.status.name,
+          currentStage: currentStage,
+          jobStatus: currentStatus,
         ));
-        
-        debugPrint('📊 [VerificationApiService] Job status: ${status.status.name}');
-        
+
+        debugPrint('📊 [VerificationApiService] Job status: $currentStatus, stage: $currentStage');
+
         // Check if processing is complete
-        if (status.status == JobStatus.completed || 
-            status.status == JobStatus.rejected ||
-            status.status == JobStatus.expired) {
-          debugPrint('✅ [VerificationApiService] Job completed with status: ${status.status.name}');
-          return status;
+        if (currentStatus == 'completed' ||
+            currentStatus == 'rejected' ||
+            currentStatus == 'expired') {
+          debugPrint('✅ [VerificationApiService] Job completed with status: $currentStatus');
+
+          // Create a simple JobModel for return (without full parsing)
+          return JobModel(
+            id: jobData['_id'] ?? '',
+            jobId: jobData['jobId'] ?? jobId,
+            kycUserId: jobData['kycUserId'] is String ? jobData['kycUserId'] : '',
+            documentType: 'national_id',
+            status: JobStatus.fromString(currentStatus),
+            currentStage: JobStage.completed,
+            stageProgress: [],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            progressPercentage: 100,
+          );
+        } else if (currentStatus == 'on_hold') {
+          // Manual review needed - stop polling and return on_hold status
+          debugPrint('⏸️ [VerificationApiService] Job requires manual review - stopping polling');
+
+          onProgress?.call(VerificationProgress(
+            stage: 'manual_review',
+            message: 'Your verification requires manual review. You will be notified once complete.',
+            progress: 0.8,
+            currentStage: currentStage,
+            jobStatus: currentStatus,
+          ));
+
+          return JobModel(
+            id: jobData['_id'] ?? '',
+            jobId: jobData['jobId'] ?? jobId,
+            kycUserId: jobData['kycUserId'] is String ? jobData['kycUserId'] : '',
+            documentType: 'national_id',
+            status: JobStatus.fromString(currentStatus),
+            currentStage: JobStage.finalReview, // on_hold means in final review
+            stageProgress: [],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            progressPercentage: 80,
+          );
         }
         
       } catch (e) {
@@ -236,6 +276,25 @@ class VerificationApiService extends getx.GetxService {
     throw Exception('timeout');
   }
 
+
+  String _getProgressMessageFromStage(String stage) {
+    switch (stage) {
+      case 'submitted':
+        return 'Documents received and queued for processing...';
+      case 'face_verification':
+        return 'Verifying selfie against ID document...';
+      case 'ocr_processing':
+        return 'Processing document information...';
+      case 'aml_check':
+        return 'Conducting security verification...';
+      case 'final_review':
+        return 'Final review in progress...';
+      case 'completed':
+        return 'Verification completed successfully!';
+      default:
+        return 'Processing verification...';
+    }
+  }
 
   String _getProgressMessage(JobModel status) {
     switch (status.currentStage) {
